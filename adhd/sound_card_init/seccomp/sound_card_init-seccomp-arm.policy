@@ -1,0 +1,60 @@
+# Copyright 2021 The ChromiumOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# rseq should be first due to frequency and purpose to decrease nptl latency
+rseq: 1
+
+access: 1
+ARM_set_tls: 1
+brk: 1
+clock_nanosleep: 1
+clock_nanosleep_time64: 1
+clone: 1
+close: 1
+connect: 1
+epoll_create1: 1
+epoll_ctl: 1
+epoll_wait: 1
+eventfd2: 1
+execve: 1
+exit: 1
+exit_group: 1
+fcntl64: 1
+fstatat64: 1
+fstatfs64: 1
+fstatfs: 1
+futex: 1
+futex_time64: 1
+getpid: 1
+getrandom: 1
+getuid32: 1
+io_uring_setup: 1
+#ioctl: arg1 == SNDRV_CTL_IOCTL_ELEM_READ || arg1 == SNDRV_CTL_IOCTL_ELEM_WRITE || arg1 == SNDRV_CTL_IOCTL_ELEM_INFO || arg1 == SNDRV_CTL_IOCTL_PVERSION || arg1 == SNDRV_CTL_IOCTL_CARD_INFO
+ioctl: arg1 == 0xc2c85512 || arg1 == 0xc2c85513 || arg1 == 0xc1105511 || arg1 == 0x80045500 || arg1 == 0x81785501
+_llseek: 1
+madvise: 1
+mmap2: arg2 in ~PROT_EXEC || arg2 in ~PROT_WRITE
+mprotect: arg2 in ~PROT_EXEC || arg2 in ~PROT_WRITE
+munmap: 1
+openat: 1
+poll: 1
+read: 1
+recvmsg: 1
+restart_syscall: 1
+rt_sigaction: 1
+rt_sigprocmask: 1
+rt_sigreturn: 1
+sched_getaffinity: 1
+sched_yield: 1
+sendmsg: 1
+set_robust_list: 1
+set_tid_address: 1
+sigaltstack: 1
+socket: arg0 == AF_UNIX
+socketpair: 1
+statx: 1
+ugetrlimit: 1
+uname: 1
+write: 1
+gettid: 1

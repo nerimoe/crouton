@@ -1,0 +1,9 @@
+[workspace]
+members = [
+    "generator",
+]
+
+[package]
+name = "sof_sys"
+version = "0.1.0"
+authors = ["The ChromiumOS Authors"]

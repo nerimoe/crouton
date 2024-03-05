@@ -1,0 +1,47 @@
+# Copyright 2022 The ChromiumOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+cc_library(
+    name = "config",
+    srcs = [
+        "cras_board_config.c",
+        "cras_board_config.h",
+        "cras_card_config.c",
+        "cras_device_blocklist.c",
+        "cras_device_blocklist.h",
+    ],
+    hdrs = [
+        "cras_card_config.h",
+    ],
+    defines = [
+        "CRAS_CONFIG_FILE_DIR=\\\"/etc/cras\\\"",
+    ],
+    visibility = ["//cras/src/server:__pkg__"],
+    deps = [
+        "//cras/src/common",
+        "//cras/src/server:cras_volume_curve",
+        "//cras/src/server:iniparser_wrapper",
+    ],
+)
+
+# Allow tests to not specify all headers.
+cc_library(
+    name = "all_headers",
+    testonly = True,
+    hdrs = glob(include = ["*.h"]),
+    textual_hdrs = glob(include = ["*.c"]),  # Allow including sources
+    visibility = [
+        "//cras/src/tests:__pkg__",
+    ],
+)
+
+# Allow tests to use sources directly
+exports_files(
+    glob(include = [
+        "*.c",
+    ]),
+    visibility = [
+        "//cras/src/tests:__pkg__",
+    ],
+)

@@ -1,0 +1,11 @@
+# Copyright 2023 The ChromiumOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+"""
+This package stubs rules_rust
+
+To apply the stub, pass
+    --override_repository=rules_rust=/absolute/path/to/cras/rules_rust_stub
+To bazel.
+"""

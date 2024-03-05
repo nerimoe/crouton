@@ -1,0 +1,582 @@
+# Copyright 2021 The ChromiumOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+cc_library(
+    name = "cras_mix",
+    srcs = [
+        "cras_mix.c",
+        "cras_mix.h",
+    ],
+    local_defines = select({
+        "//:x86_64_build": [
+            "HAVE_SSE42=1",
+            "HAVE_AVX=1",
+            "HAVE_AVX2=1",
+            "HAVE_FMA=1",
+        ],
+        "//conditions:default": [
+            "HAVE_SSE42=0",
+            "HAVE_AVX=0",
+            "HAVE_AVX2=0",
+            "HAVE_FMA=0",
+        ],
+    }),
+    visibility = [
+        "//cras/src/benchmark:__pkg__",
+        "//cras/src/tests:__pkg__",
+    ],
+    deps = ["cras_mix_ops"] + select({
+        "//:x86_64_build": [
+            ":cras_mix_ops_avx",
+            ":cras_mix_ops_avx2",
+            ":cras_mix_ops_fma",
+            ":cras_mix_ops_sse42",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+cc_library(
+    name = "cras_mix_ops",
+    srcs = [
+        "cras_mix_ops.c",
+        "cras_system_state.h",
+    ],
+    hdrs = ["cras_mix_ops.h"],
+    deps = ["//cras/src/common:cras_types"],
+)
+
+cc_library(
+    name = "cras_mix_ops_sse42",
+    srcs = [
+        "cras_mix_ops.c",
+        "cras_system_state.h",
+    ],
+    hdrs = ["cras_mix_ops.h"],
+    copts = [
+        "-msse4.2",
+        "-ffast-math",
+    ],
+    local_defines = ["OPS_SSE42"],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+    deps = ["//cras/src/common:cras_types"],
+)
+
+cc_library(
+    name = "cras_mix_ops_avx",
+    srcs = [
+        "cras_mix_ops.c",
+        "cras_system_state.h",
+    ],
+    hdrs = ["cras_mix_ops.h"],
+    copts = [
+        "-mavx",
+        "-ffast-math",
+    ],
+    local_defines = ["OPS_AVX"],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+    deps = ["//cras/src/common:cras_types"],
+)
+
+cc_library(
+    name = "cras_mix_ops_avx2",
+    srcs = [
+        "cras_mix_ops.c",
+        "cras_system_state.h",
+    ],
+    hdrs = ["cras_mix_ops.h"],
+    copts = [
+        "-mavx2",
+        "-ffast-math",
+    ],
+    local_defines = ["OPS_AVX2"],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+    deps = ["//cras/src/common:cras_types"],
+)
+
+cc_library(
+    name = "cras_mix_ops_fma",
+    srcs = [
+        "cras_mix_ops.c",
+        "cras_system_state.h",
+    ],
+    hdrs = ["cras_mix_ops.h"],
+    copts = [
+        "-mavx2",
+        "-mfma",
+        "-ffast-math",
+    ],
+    local_defines = ["OPS_FMA"],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+    deps = ["//cras/src/common:cras_types"],
+)
+
+cc_library(
+    name = "cras_alsa_helpers",
+    srcs = [
+        "cras_alsa_helpers.c",
+    ],
+    hdrs = ["cras_alsa_helpers.h"],
+    visibility = ["//cras/src/benchmark:__pkg__"],
+    deps = [
+        "//cras/src/common:cras_types",
+        "//cras/src/common:cras_util",
+    ],
+)
+
+cc_library(
+    name = "cras_alsa_ucm",
+    srcs = [
+        "cras_alsa_mixer_name.c",
+        "cras_alsa_mixer_name.h",
+        "cras_alsa_ucm.c",
+        "cras_alsa_ucm_section.c",
+    ],
+    hdrs = [
+        "cras_alsa_ucm.h",
+        "cras_alsa_ucm_section.h",
+    ],
+    visibility = ["//cras/src/benchmark:__pkg__"],
+    deps = [
+        "//cras/src/common:cras_string",
+        "//cras/src/common:cras_util",
+        "//third_party/utlist",
+    ],
+)
+
+cc_library(
+    name = "iniparser_wrapper",
+    srcs = [
+        "iniparser_wrapper.h",
+    ],
+    visibility = ["//cras/src/server/config:__pkg__"],
+    deps = ["@iniparser"],
+)
+
+cc_library(
+    name = "cras_volume_curve",
+    srcs = [
+        "cras_volume_curve.c",
+        "cras_volume_curve.h",
+    ],
+    visibility = ["//cras/src/server/config:__pkg__"],
+    deps = ["//cras/src/common"],
+)
+
+cc_library(
+    name = "ewma_power",
+    srcs = ["ewma_power.c"],
+    hdrs = ["ewma_power.h"],
+    deps = [
+        ":cras_audio_area",
+    ],
+)
+
+cc_library(
+    name = "cras_audio_area",
+    srcs = ["cras_audio_area.c"],
+    hdrs = ["cras_audio_area.h"],
+    deps = [
+        ":cras_mix",
+        "//cras/src/common",
+    ],
+)
+
+cc_library(
+    name = "cras_fmt_conv_ops",
+    srcs = ["cras_fmt_conv_ops.c"],
+    hdrs = ["cras_fmt_conv_ops.h"],
+    visibility = ["//cras/src/dsp/tests:__pkg__"],
+    deps = ["//cras/src/common"],
+)
+
+cc_library(
+    name = "cras_dlc",
+    srcs = select({
+        "//:dlc_build": [],
+        "//conditions:default": ["cras_dlc_stub.c"],
+    }),
+    deps = ["//cras/src/server/rust"],
+)
+
+cc_library(
+    name = "cras_features",
+    srcs = [
+        "cras_features_impl.c",
+        "cras_features_impl.h",
+        "cras_features_override.h",
+    ] + select({
+        "//:featured_build": ["cras_features_backend_featured.c"],
+        "//conditions:default": ["cras_features_backend_stub.c"],
+    }),
+    hdrs = ["cras_features.h"],
+    visibility = ["//cras/src/tests:__pkg__"],
+    deps = select({
+        "//:featured_build": ["@pkg_config//libfeatures_c"],
+        "//conditions:default": [],
+    }),
+)
+
+cc_library(
+    name = "cras_features_override",
+    testonly = True,
+    hdrs = ["cras_features_override.h"],
+    visibility = ["//cras/src/tests:__pkg__"],
+    deps = [":cras_features"],
+)
+
+cc_library(
+    name = "cras_sr",
+    srcs = select({
+        "//:ml_build": [
+            "cras_sr.c",
+            "cras_sr_bt_adapters.c",
+            "cras_sr_bt_util.c",
+        ],
+        "//conditions:default": [
+            "cras_sr_stub.c",
+            "cras_sr_bt_adapters_stub.c",
+            "cras_sr_bt_util_stub.c",
+        ],
+    }),
+    hdrs = [
+        "buffer_share.h",
+        "cras_dsp.h",
+        "cras_iodev.h",
+        "cras_rstream.h",
+        "cras_rstream_config.h",
+        "cras_server_metrics.h",
+        "cras_sr.h",
+        "cras_sr_bt_adapters.h",
+        "cras_sr_bt_util.h",
+        "cras_stream_apm.h",
+    ],
+    deps = [
+        ":cras_audio_area",
+        ":cras_dlc",
+        ":cras_features",
+        ":cras_fmt_conv_ops",
+        ":dsp_types",
+        ":ewma_power",
+        "//cras/src:include_here_hack",
+        "//cras/src/common",
+    ] + select({
+        "//:ml_build": ["//cras/src/dsp:am"],
+        "//conditions:default": [],
+    }),
+)
+
+cc_library(
+    name = "dsp_types",
+    hdrs = [
+        "cras_dsp_ini.h",
+        "cras_dsp_module.h",
+        "cras_dsp_pipeline.h",
+        "cras_expr.h",
+    ],
+    visibility = ["//cras/src/dsp:__pkg__"],
+    deps = [
+        ":iniparser_wrapper",
+    ],
+)
+
+cc_library(
+    name = "cras_observer_types",
+    hdrs = [
+        "cras_observer.h",
+    ],
+    visibility = ["//cras/src/common:__pkg__"],
+    deps = [
+        "//cras/src/common:cras_observer_ops",
+    ],
+)
+
+cc_library(
+    name = "libcrasserver",
+    srcs = [
+        "audio_thread.c",
+        "audio_thread.h",
+        "audio_thread_log.h",
+        "buffer_share.c",
+        "buffer_share.h",
+        "cras_a2dp_endpoint.c",
+        "cras_a2dp_endpoint.h",
+        "cras_a2dp_info.c",
+        "cras_a2dp_info.h",
+        "cras_a2dp_iodev.c",
+        "cras_a2dp_iodev.h",
+        "cras_a2dp_manager.c",
+        "cras_a2dp_manager.h",
+        "cras_alert.c",
+        "cras_alert.h",
+        "cras_alsa_card.c",
+        "cras_alsa_card.h",
+        "cras_alsa_helpers.c",
+        "cras_alsa_helpers.h",
+        "cras_alsa_io.c",
+        "cras_alsa_io.h",
+        "cras_alsa_io_common.c",
+        "cras_alsa_io_common.h",
+        "cras_alsa_io_ops.c",
+        "cras_alsa_io_ops.h",
+        "cras_alsa_jack.c",
+        "cras_alsa_jack.h",
+        "cras_alsa_jack_private.h",
+        "cras_alsa_mixer.c",
+        "cras_alsa_mixer.h",
+        "cras_alsa_plugin_io.c",
+        "cras_alsa_usb_io.c",
+        "cras_alsa_usb_io.h",
+        "cras_audio_thread_monitor.c",
+        "cras_audio_thread_monitor.h",
+        "cras_bt_adapter.c",
+        "cras_bt_adapter.h",
+        "cras_bt_battery_provider.c",
+        "cras_bt_battery_provider.h",
+        "cras_bt_constants.h",
+        "cras_bt_device.c",
+        "cras_bt_device.h",
+        "cras_bt_endpoint.c",
+        "cras_bt_endpoint.h",
+        "cras_bt_io.c",
+        "cras_bt_io.h",
+        "cras_bt_log.c",
+        "cras_bt_log.h",
+        "cras_bt_manager.c",
+        "cras_bt_player.c",
+        "cras_bt_player.h",
+        "cras_bt_policy.c",
+        "cras_bt_policy.h",
+        "cras_bt_profile.c",
+        "cras_bt_profile.h",
+        "cras_bt_transport.c",
+        "cras_bt_transport.h",
+        "cras_capture_rclient.c",
+        "cras_capture_rclient.h",
+        "cras_control_rclient.c",
+        "cras_control_rclient.h",
+        "cras_dbus.c",
+        "cras_dbus.h",
+        "cras_dbus_control.c",
+        "cras_dbus_control.h",
+        "cras_dbus_util.c",
+        "cras_dbus_util.h",
+        "cras_device_monitor.c",
+        "cras_device_monitor.h",
+        "cras_dlc_manager.c",
+        "cras_dsp.c",
+        "cras_dsp.h",
+        "cras_dsp_ini.c",
+        "cras_dsp_ini.h",
+        "cras_dsp_mod_builtin.c",
+        "cras_dsp_mod_ladspa.c",
+        "cras_dsp_module.h",
+        "cras_dsp_pipeline.c",
+        "cras_dsp_pipeline.h",
+        "cras_empty_iodev.c",
+        "cras_empty_iodev.h",
+        "cras_expr.c",
+        "cras_expr.h",
+        "cras_fl_manager.c",
+        "cras_fl_manager.h",
+        "cras_fl_media.c",
+        "cras_fl_media.h",
+        "cras_fl_media_adapter.c",
+        "cras_fl_media_adapter.h",
+        "cras_fl_pcm_iodev.c",
+        "cras_fl_pcm_iodev.h",
+        "cras_floop_iodev.c",
+        "cras_floop_iodev.h",
+        "cras_fmt_conv.c",
+        "cras_fmt_conv.h",
+        "cras_gpio_jack.c",
+        "cras_gpio_jack.h",
+        "cras_hfp_ag_profile.c",
+        "cras_hfp_ag_profile.h",
+        "cras_hfp_alsa_iodev.c",
+        "cras_hfp_alsa_iodev.h",
+        "cras_hfp_iodev.c",
+        "cras_hfp_iodev.h",
+        "cras_hfp_manager.c",
+        "cras_hfp_manager.h",
+        "cras_hfp_slc.c",
+        "cras_hfp_slc.h",
+        "cras_hotword_handler.c",
+        "cras_hotword_handler.h",
+        "cras_iodev.c",
+        "cras_iodev.h",
+        "cras_iodev_list.c",
+        "cras_iodev_list.h",
+        "cras_loopback_iodev.c",
+        "cras_loopback_iodev.h",
+        "cras_main_message.c",
+        "cras_main_message.h",
+        "cras_main_thread_log.h",
+        "cras_non_empty_audio_handler.c",
+        "cras_non_empty_audio_handler.h",
+        "cras_observer.c",
+        "cras_observer.h",
+        "cras_playback_rclient.c",
+        "cras_playback_rclient.h",
+        "cras_ramp.c",
+        "cras_ramp.h",
+        "cras_rclient.c",
+        "cras_rclient.h",
+        "cras_rclient_util.c",
+        "cras_rclient_util.h",
+        "cras_rstream.c",
+        "cras_rstream.h",
+        "cras_rstream_config.c",
+        "cras_rstream_config.h",
+        "cras_rtc.c",
+        "cras_rtc.h",
+        "cras_sco.c",
+        "cras_sco.h",
+        "cras_server.c",
+        "cras_server.h",
+        "cras_server_metrics.c",
+        "cras_server_metrics.h",
+        "cras_speak_on_mute_detector.c",
+        "cras_speak_on_mute_detector.h",
+        "cras_system_state.c",
+        "cras_system_state.h",
+        "cras_telephony.c",
+        "cras_telephony.h",
+        "cras_tm.c",
+        "cras_tm.h",
+        "cras_udev.c",
+        "cras_udev.h",
+        "cras_unified_rclient.c",
+        "cras_unified_rclient.h",
+        "cras_utf8.c",
+        "cras_utf8.h",
+        "dev_io.c",
+        "dev_io.h",
+        "dev_stream.c",
+        "dev_stream.h",
+        "float_buffer.h",
+        "input_data.c",
+        "input_data.h",
+        "linear_resampler.c",
+        "linear_resampler.h",
+        "polled_interval_checker.c",
+        "polled_interval_checker.h",
+        "server_stream.c",
+        "server_stream.h",
+        "softvol_curve.c",
+        "softvol_curve.h",
+        "speak_on_mute_detector.c",
+        "speak_on_mute_detector.h",
+        "stream_list.c",
+        "stream_list.h",
+        "test_iodev.c",
+        "test_iodev.h",
+    ],
+    hdrs = [
+        "cras_alsa_plugin_io.h",
+        "cras_bt_manager.h",
+        "cras_dlc_manager.h",
+    ],
+    visibility = ["//cras/src/fuzz:__pkg__"],
+    deps = [
+        ":cras_alsa_ucm",
+        ":cras_apm",
+        ":cras_audio_area",
+        ":cras_dlc",
+        ":cras_features",
+        ":cras_fmt_conv_ops",
+        ":cras_mix",
+        ":cras_sr",
+        ":dsp_types",
+        ":ewma_power",
+        "//cras/src/common",
+        "//cras/src/dsp",
+        "//cras/src/plc",
+        "//cras/src/server/config",
+        "//cras/src/server/rust",
+        "@pkg_config//alsa",
+        "@pkg_config//dbus-1",
+        "@pkg_config//libudev",
+        "@pkg_config//speexdsp",
+    ],
+)
+
+cc_library(
+    name = "cras_apm",
+    srcs = select({
+        "//:apm_build": [
+            "cras_stream_apm.c",
+            "cras_apm_reverse.c",
+        ],
+        "//conditions:default": ["cras_stream_apm_noop.c"],
+    }) + [
+        "audio_thread.h",
+        "buffer_share.h",
+        "cras_dsp.h",
+        "cras_iodev_list.h",
+        "cras_iodev.h",
+        "cras_main_message.h",
+        "cras_rstream_config.h",
+        "cras_rstream.h",
+        "cras_speak_on_mute_detector.h",
+        "cras_processor_config.h",
+        "cras_processor_config.c",
+        "dev_io.h",
+        "polled_interval_checker.h",
+        "speak_on_mute_detector.h",
+    ],
+    hdrs = [
+        "cras_apm_reverse.h",
+        "cras_stream_apm.h",
+        "float_buffer.h",
+    ],
+    deps = [
+        ":cras_audio_area",
+        ":dsp_types",
+        ":ewma_power",
+        ":cras_features",
+        "//cras/src/audio_processor/c:plugin_processor",
+        "//cras/src/server/rust",
+        "//cras/src/common",
+        "//cras/src/dsp",
+    ] + select({
+        "//conditions:default": [],
+        "//:apm_build": ["@pkg_config//libwebrtc_apm"],
+    }),
+)
+
+cc_binary(
+    name = "cras",
+    srcs = ["cras.c"],
+    visibility = ["//dist:__pkg__"],
+    deps = [":libcrasserver"],
+)
+
+# Allow tests to not specify all headers.
+cc_library(
+    name = "all_headers",
+    testonly = True,
+    hdrs = glob(include = ["*.h"]),
+    textual_hdrs = glob(
+        # Allow including sources
+        include = ["*.c"],
+        # Disallow using cras_mix sources directly, should use the :cras_mix cc_library
+        exclude = ["cras_mix*.c"],
+    ),
+    visibility = [
+        "//cras/src/tests:__pkg__",
+    ],
+)
+
+# Allow tests to use sources directly
+exports_files(
+    glob(
+        include = ["*.c"],
+        # Disallow using cras_mix sources directly, should use the :cras_mix cc_library
+        exclude = ["cras_mix*.c"],
+    ),
+    visibility = [
+        "//cras/src/tests:__pkg__",
+    ],
+)

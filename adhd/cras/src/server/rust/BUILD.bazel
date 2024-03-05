@@ -1,0 +1,58 @@
+# Copyright 2022 The ChromiumOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+load("//:utils.bzl", "require_no_config")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("@crate_index//:defs.bzl", "all_crate_deps")
+
+cc_library(
+    name = "rust",
+    visibility = ["//visibility:public"],
+    deps = select({
+        "//:system_cras_rust_build": [
+            ":headers",
+            "//cras/src/server/rust/system_cras_rust",
+        ],
+        "//conditions:default": [
+            ":headers",
+            ":lib",
+        ],
+    }),
+    # TODO: Enable "cras_dlc" crate based on //:dlc_build
+)
+
+cc_library(
+    name = "headers",
+    hdrs = glob(include = ["include/*.h"]),
+    visibility = ["//visibility:public"],
+)
+
+rust_library(
+    name = "lib",
+    srcs = glob(include = ["src/*.rs"]),
+    target_compatible_with = require_no_config("//:system_cras_rust_build"),
+    deps = [
+        "//cras/src/audio_processor",
+    ] + all_crate_deps(),
+)
+
+rust_test(
+    name = "test",
+    crate = ":lib",
+    tags = [
+        "tsan-broken",
+    ],
+    target_compatible_with = require_no_config("//:system_cras_rust_build"),
+)
+
+cc_test(
+    name = "cras_processor_test",
+    srcs = ["cras_processor_test.cc"],
+    deps = [
+        ":rust",
+        "//cras/src/audio_processor/c:plugin_processor",
+        "@pkg_config//gtest",
+        "@pkg_config//gtest_main",
+    ],
+)

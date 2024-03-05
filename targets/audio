@@ -44,18 +44,29 @@ echo "Fetching CRAS (branch $ADHD_HEAD)..." 1>&2
 archive="$CRASBUILDTMP/adhd.tar.gz"
 log="$CRASBUILDTMP/wget.log"
 urlbase="https://chromium.googlesource.com/chromiumos/third_party/adhd/+archive"
-( wget -O "$archive" "$urlbase/$ADHD_HEAD.tar.gz" 2>&1 \
-                                    || echo "Error fetching CRAS" ) | tee "$log"
-if tail -n 1 "$log" | grep -q "^Error"; then
-    if grep -q "404 Not Found" "$log" 2>/dev/null; then
-        echo "Branch not found, falling back on master (audio might not work)..." 1>&2
-        ADHD_HEAD="master"
-        wget -O "$archive" "$urlbase/$ADHD_HEAD.tar.gz"
-    else
-        # wget already printed an explicit error
-        exit 1
-    fi
-fi
+#( wget -O "$archive" "$urlbase/$ADHD_HEAD.tar.gz" 2>&1 \
+#                                    || echo "Error fetching CRAS" ) | tee "$log"
+#if tail -n 1 "$log" | grep -q "^Error"; then
+#    if grep -q "404 Not Found" "$log" 2>/dev/null; then
+#        echo "Branch not found, falling back on master (audio might not work)..." 1>&2
+#        ADHD_HEAD="master"
+#        wget -O "$archive" "$urlbase/$ADHD_HEAD.tar.gz"
+#    else
+#        # wget already printed an explicit error
+#        exit 1
+#    fi
+#fi
+
+# ChromiumOS >= 15378.0.0 removed autotools support (https://crrev.com/c/4322563),
+# fetch the last known good Makefile.am. We can still patch it as required.
+lastgoodam="c2ece09f69565afcbcf511b1693f3fe735bde511/cras/src/Makefile.am"
+mkdir -p "$CRASBUILDTMP/cras/src"
+wget "https://chromium.googlesource.com/chromiumos/third_party/adhd/+/${lastgoodam}?format=TEXT" -O- \
+    | base64 -d > "$CRASBUILDTMP/Makefile.am"
+
+sed -i -e 's/\-Wundef\-prefix=HAVE_,CRAS_//g' "$CRASBUILDTMP/Makefile.am"
+sed -i -e 's/\-Werror=undef-prefix//g' "$CRASBUILDTMP/Makefile.am"
+
 
 # Build CRAS ALSA plugin for the given architecture ($1)
 # A blank parameter means we are building for the native architecture.
@@ -112,10 +123,20 @@ build_cras() {
         cd "$CRASBUILDTMP"
 
         # Make sure we start fresh
-        rm -rf --one-file-system cras
+        rm -rf --one-file-system cras include
+
+        # Copy over prefetched Makefile.am, it'll get overriden if already present.
+        mkdir -p cras/src
+        cp -r /tmp/adhd/cras/* cras/
+		  cp Makefile.am cras/src/Makefile.am
 
         # -m prevents "time stamp is in the future" spam
-        tar -xmf adhd.tar.gz cras/src
+        #tar -xmf adhd.tar.gz cras/src
+
+        # If include/ exists, extract the content and move it to cras/src/common
+        #if tar -xmf adhd.tar.gz include; then
+        #  mv include/*.h cras/src/common
+        #fi
 
         cd cras/src
 

@@ -1,0 +1,136 @@
+# Copyright 2021 The ChromiumOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+load("//:utils.bzl", "require_config")
+
+cc_library(
+    name = "am",
+    srcs = ["am.cc"],
+    hdrs = ["am.h"],
+    target_compatible_with = require_config("//:ml_build"),
+    visibility = [
+        ":__subpackages__",
+        "//cras/src/benchmark:__pkg__",
+        "//cras/src/server:__pkg__",
+    ],
+    deps = select({
+        "//:ml_build": ["@pkg_config//tensorflowlite"],
+        "//conditions:default": [],
+    }),
+)
+
+cc_library(
+    name = "dsp",
+    srcs = [
+        "biquad.c",
+        "crossover.c",
+        "crossover2.c",
+        "dcblock.c",
+        "drc_kernel.c",
+        "eq.c",
+        "eq2.c",
+        "quad_rotation.c",
+    ],
+    hdrs = [
+        "crossover.h",
+        "dcblock.h",
+        "eq.h",
+        "quad_rotation.h",
+    ],
+    visibility = [
+        ":__subpackages__",
+        "//cras/src/server:__pkg__",
+    ],
+    deps = [
+        ":drc",
+        ":drc_math",
+        ":dsp_util",
+        "//cras/src/common",
+        "//cras/src/server:dsp_types",
+    ],
+)
+
+cc_library(
+    name = "eq",
+    srcs = ["eq.c"],
+    hdrs = ["eq.h"],
+    deps = [":biquad"],
+)
+
+cc_library(
+    name = "eq2",
+    srcs = ["eq2.c"],
+    hdrs = ["eq2.h"],
+    visibility = ["//cras/src/benchmark:__pkg__"],
+    deps = [":biquad"],
+)
+
+cc_library(
+    name = "drc",
+    srcs = ["drc.c"],
+    hdrs = ["drc.h"],
+    linkopts = ["-lm"],
+    visibility = ["//cras/src/benchmark:__pkg__"],
+    deps = [
+        ":crossover2",
+        ":drc_kernel",
+        ":eq2",
+    ],
+)
+
+cc_library(
+    name = "biquad",
+    srcs = ["biquad.c"],
+    hdrs = ["biquad.h"],
+)
+
+cc_library(
+    name = "crossover2",
+    srcs = ["crossover2.c"],
+    hdrs = ["crossover2.h"],
+    deps = [":biquad"],
+)
+
+cc_library(
+    name = "drc_kernel",
+    srcs = ["drc_kernel.c"],
+    hdrs = ["drc_kernel.h"],
+    linkopts = ["-lm"],
+    deps = [":drc_math"],
+)
+
+cc_library(
+    name = "drc_math",
+    srcs = ["drc_math.c"],
+    hdrs = ["drc_math.h"],
+)
+
+cc_library(
+    name = "dsp_util",
+    srcs = ["dsp_util.c"],
+    hdrs = ["dsp_util.h"],
+    visibility = ["//cras/src/benchmark:__pkg__"],
+    deps = ["//cras/src/common:cras_types"],
+)
+
+# Allow tests to not specify all headers.
+cc_library(
+    name = "all_headers",
+    testonly = True,
+    hdrs = glob(include = ["*.h"]),
+    textual_hdrs = glob(include = ["*.c"]),  # Allow including sources
+    visibility = [
+        "//cras/src/tests:__pkg__",
+    ],
+)
+
+# Allow tests to use sources directly
+exports_files(
+    glob(include = [
+        "*.c",
+    ]),
+    visibility = [
+        "//cras/src/tests:__pkg__",
+    ],
+)

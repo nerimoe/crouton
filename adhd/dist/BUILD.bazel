@@ -1,0 +1,110 @@
+# Copyright 2022 The ChromiumOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+load("//:utils.bzl", "require_no_config")
+
+# Binary targets.
+filegroup(
+    name = "bin",
+    srcs = [
+        "//cras/src/server:cras",
+        "//cras/src/tools:cras_test_client",
+    ],
+)
+
+# Extra binary targets.
+# These are installed to /usr/local/bin by ebuild, hence only appear on test images.
+filegroup(
+    name = "extra_bin",
+    srcs = [
+        "//cras/scripts:asoc_dapm_graph",
+        "//cras/scripts:audio_diagnostics_legacy",
+        "//cras/src/benchmark:cras_bench",
+        "//cras/src/tools:cras_monitor",
+        "//cras/src/tools:cras_router",
+    ],
+)
+
+# Public header targets.
+filegroup(
+    name = "include",
+    srcs = ["//cras/include:public_headers"],
+)
+
+# Library targets
+filegroup(
+    name = "lib",
+    srcs = [
+        "//cras/src/libcras:cras",
+    ],
+)
+
+filegroup(
+    name = "alsa_lib",
+    srcs = [
+        "//cras/src/alsa_plugin:asound_module_ctl_cras",
+        "//cras/src/alsa_plugin:asound_module_pcm_cras",
+    ],
+)
+
+filegroup(
+    name = "pkgconfig",
+    srcs = [
+        "//cras:libcras.pc",
+    ],
+)
+
+filegroup(
+    name = "fuzzer",
+    srcs = [
+        "//cras/src/fuzz:cras_fl_media_fuzzer",
+        "//cras/src/fuzz:cras_hfp_slc_fuzzer",
+        "//cras/src/fuzz:cras_rclient_message_fuzzer",
+    ],
+)
+
+py_binary(
+    name = "dist",
+    srcs = ["dist.py"],
+    args = select({
+        "//:fuzzer_build": ["--_fuzzer_files $(locations :fuzzer)"],
+        "//conditions:default": [
+            "--_bin_files $(locations :bin)",
+            "--_extra_bin_files $(locations :extra_bin)",
+            "--_include_files $(locations :include)",
+            "--_lib_files $(locations :lib)",
+            "--_alsa_lib_files $(locations :alsa_lib)",
+            "--_pkgconfig_files $(locations :pkgconfig)",
+        ],
+    }) + ["--"],
+    data = select({
+        "//:fuzzer_build": [":fuzzer"],
+        "//conditions:default": [
+            ":alsa_lib",
+            ":bin",
+            ":extra_bin",
+            ":include",
+            ":lib",
+            ":pkgconfig",
+        ],
+    }),
+)
+
+py_binary(
+    name = "dist_client_only",
+    srcs = ["dist.py"],
+    args = [
+        "--_bin_files $(location //cras/src/tools:cras_test_client)",
+        "--_lib_files $(locations :lib)",
+        "--_alsa_lib_files $(locations :alsa_lib)",
+        "--",
+    ],
+    data = [
+        ":alsa_lib",
+        ":lib",
+        "//cras/src/tools:cras_test_client",
+    ],
+    main = "dist.py",
+    target_compatible_with = require_no_config("//:fuzzer_build"),
+)
